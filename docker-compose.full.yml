@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # Jenkins CI/CD
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: test-engine-jenkins
+    privileged: true
+    user: root
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins:/var/jenkins_home/init.groovy.d
+    environment:
+      - JENKINS_OPTS=--prefix=/jenkins
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # 测试引擎平台
+  test-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-engine-platform
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms512m -Xmx1024m
+      - WEBHOOK_TOKEN=your-secret-token
+    volumes:
+      - ./test-workspace:/app/test-workspace
+      - ./test-results:/app/test-results
+      - ./logs:/app/logs
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - test-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: test-engine-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=testengine
+      - MYSQL_USER=testengine
+      - MYSQL_PASSWORD=testengine123
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-sql:/docker-entrypoint-initdb.d
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: test-engine-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - test-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Grafana 监控面板
+  grafana:
+    image: grafana/grafana:latest
+    container_name: test-engine-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: test-engine-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - test-network
+    restart: unless-stopped
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  jenkins-home:
+  mysql-data:
+  redis-data:
+  grafana-data:
+  prometheus-data:

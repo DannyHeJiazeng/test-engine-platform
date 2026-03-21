@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # 测试引擎平台
+  test-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-engine-platform
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms512m -Xmx1024m
+      - WEBHOOK_TOKEN=your-secret-token
+    volumes:
+      - ./test-workspace:/app/test-workspace
+      - ./test-results:/app/test-results
+      - ./logs:/app/logs
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - test-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: test-engine-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=testengine
+      - MYSQL_USER=testengine
+      - MYSQL_PASSWORD=testengine123
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-sql:/docker-entrypoint-initdb.d
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: test-engine-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - test-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:

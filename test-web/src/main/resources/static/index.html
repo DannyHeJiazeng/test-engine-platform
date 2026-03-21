@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Engine Platform - 测试中台</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/echarts@5/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f7fa;
+        }
+        .app-container {
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        .main-content {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+        .stat-card h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 600;
+        }
+        .stat-card.success .value { color: #67C23A; }
+        .stat-card.danger .value { color: #F56C6C; }
+        .stat-card.warning .value { color: #E6A23C; }
+        .stat-card.info .value { color: #409EFF; }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .nav-menu {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            height: 300px;
+        }
+        .execution-list {
+            margin-top: 20px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-badge.success { background: #f0f9eb; color: #67C23A; }
+        .status-badge.failed { background: #fef0f0; color: #F56C6C; }
+        .status-badge.running { background: #ecf5ff; color: #409EFF; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container">
+            <!-- Header -->
+            <div class="header">
+                <h1>🧪 Test Engine Platform</h1>
+                <p>一站式测试中台 - 质量门禁 · 性能测试 · 巡检监控</p>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Navigation -->
+                <div class="nav-menu">
+                    <el-button type="primary" @click="activeTab = 'dashboard'">📊 仪表盘</el-button>
+                    <el-button @click="activeTab = 'execution'">▶️ 测试执行</el-button>
+                    <el-button @click="activeTab = 'performance'">⚡ 性能测试</el-button>
+                    <el-button @click="activeTab = 'inspection'">🔍 巡检管理</el-button>
+                    <el-button @click="activeTab = 'reports'">📋 报告中心</el-button>
+                </div>
+
+                <!-- Dashboard Tab -->
+                <div v-if="activeTab === 'dashboard'">
+                    <div class="stats-row">
+                        <div class="stat-card success">
+                            <h3>总执行次数</h3>
+                            <div class="value">{{ stats.totalExecutions }}</div>
+                        </div>
+                        <div class="stat-card info">
+                            <h3>总测试数</h3>
+                            <div class="value">{{ stats.totalTests }}</div>
+                        </div>
+                        <div class="stat-card success">
+                            <h3>通过数</h3>
+                            <div class="value">{{ stats.totalPassed }}</div>
+                        </div>
+                        <div class="stat-card danger">
+                            <h3>失败数</h3>
+                            <div class="value">{{ stats.totalFailed }}</div>
+                        </div>
+                        <div class="stat-card warning">
+                            <h3>平均通过率</h3>
+                            <div class="value">{{ (stats.averagePassRate * 100).toFixed(1) }}%</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>📈 通过率趋势</h2>
+                        <div id="trendChart" class="chart-container"></div>
+                    </div>
+
+                    <div class="card">
+                        <h2>📋 最近执行</h2>
+                        <el-table :data="recentExecutions" style="width: 100%">
+                            <el-table-column prop="executionId" label="执行ID" width="180"></el-table-column>
+                            <el-table-column prop="testType" label="类型" width="120"></el-table-column>
+                            <el-table-column prop="status" label="状态" width="100">
+                                <template #default="scope">
+                                    <span :class="'status-badge ' + scope.row.status.toLowerCase()">
+                                        {{ scope.row.status }}
+                                    </span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="totalTests" label="总数" width="80"></el-table-column>
+                            <el-table-column prop="passedTests" label="通过" width="80"></el-table-column>
+                            <el-table-column prop="failedTests" label="失败" width="80"></el-table-column>
+                            <el-table-column prop="createdAt" label="时间"></el-table-column>
+                        </el-table>
+                    </div>
+                </div>
+
+                <!-- Execution Tab -->
+                <div v-if="activeTab === 'execution'">
+                    <div class="card">
+                        <h2>▶️ 执行测试</h2>
+                        <el-form :model="executionForm" label-width="120px">
+                            <el-form-item label="包路径">
+                                <el-input v-model="executionForm.packagePath" placeholder="com.example.functional"></el-input>
+                            </el-form-item>
+                            <el-form-item label="测试类型">
+                                <el-select v-model="executionForm.testType" placeholder="选择测试类型">
+                                    <el-option label="功能测试" value="functional"></el-option>
+                                    <el-option label="性能测试" value="performance"></el-option>
+                                    <el-option label="巡检测试" value="inspection"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="质量门禁">
+                                <el-switch v-model="executionForm.checkQualityGate"></el-switch>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" @click="executeTest" :loading="executing">
+                                    执行测试
+                                </el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div class="card" v-if="executionResult">
+                        <h2>📊 执行结果</h2>
+                        <div class="stats-row">
+                            <div class="stat-card info">
+                                <h3>总测试数</h3>
+                                <div class="value">{{ executionResult.totalTests }}</div>
+                            </div>
+                            <div class="stat-card success">
+                                <h3>通过数</h3>
+                                <div class="value">{{ executionResult.passedTests }}</div>
+                            </div>
+                            <div class="stat-card danger">
+                                <h3>失败数</h3>
+                                <div class="value">{{ executionResult.failedTests }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Tab -->
+                <div v-if="activeTab === 'performance'">
+                    <div class="card">
+                        <h2>⚡ 性能测试</h2>
+                        <el-form :model="performanceForm" label-width="120px">
+                            <el-form-item label="测试URL">
+                                <el-input v-model="performanceForm.url" placeholder="http://localhost:8080/api/test"></el-input>
+                            </el-form-item>
+                            <el-row :gutter="20">
+                                <el-col :span="8">
+                                    <el-form-item label="并发数">
+                                        <el-input-number v-model="performanceForm.threads" :min="1" :max="1000"></el-input-number>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="8">
+                                    <el-form-item label="启动时间">
+                                        <el-input-number v-model="performanceForm.rampUpSeconds" :min="1" :max="300"></el-input-number>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="8">
+                                    <el-form-item label="持续时间">
+                                        <el-input-number v-model="performanceForm.durationSeconds" :min="1" :max="3600"></el-input-number>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-form-item>
+                                <el-button type="primary" @click="runPerformanceTest" :loading="performanceLoading">
+                                    执行性能测试
+                                </el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div class="card" v-if="performanceResult">
+                        <h2>📊 性能结果</h2>
+                        <div class="stats-row">
+                            <div class="stat-card info">
+                                <h3>总请求数</h3>
+                                <div class="value">{{ performanceResult.totalRequests }}</div>
+                            </div>
+                            <div class="stat-card success">
+                                <h3>TPS</h3>
+                                <div class="value">{{ performanceResult.tps?.toFixed(2) }}</div>
+                            </div>
+                            <div class="stat-card warning">
+                                <h3>平均响应时间</h3>
+                                <div class="value">{{ performanceResult.avgResponseTime?.toFixed(0) }}ms</div>
+                            </div>
+                            <div class="stat-card danger">
+                                <h3>TP90</h3>
+                                <div class="value">{{ performanceResult.tp90ResponseTime }}ms</div>
+                            </div>
+                            <div class="stat-card" :class="performanceResult.errorRate < 0.01 ? 'success' : 'danger'">
+                                <h3>错误率</h3>
+                                <div class="value">{{ (performanceResult.errorRate * 100).toFixed(2) }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inspection Tab -->
+                <div v-if="activeTab === 'inspection'">
+                    <div class="card">
+                        <h2>🔍 巡检任务</h2>
+                        <el-table :data="inspectionTasks" style="width: 100%">
+                            <el-table-column prop="taskId" label="任务ID" width="150"></el-table-column>
+                            <el-table-column prop="packagePath" label="包路径"></el-table-column>
+                            <el-table-column prop="intervalSeconds" label="间隔(秒)" width="100"></el-table-column>
+                            <el-table-column prop="lastRunStatus" label="最后状态" width="100">
+                                <template #default="scope">
+                                    <span :class="'status-badge ' + (scope.row.lastRunStatus || '').toLowerCase()">
+                                        {{ scope.row.lastRunStatus || 'N/A' }}
+                                    </span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="enabled" label="状态" width="80">
+                                <template #default="scope">
+                                    <el-tag :type="scope.row.enabled ? 'success' : 'info'">
+                                        {{ scope.row.enabled ? '启用' : '禁用' }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="150">
+                                <template #default="scope">
+                                    <el-button size="small" @click="executeInspection(scope.row.taskId)">执行</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
+                    <div class="card">
+                        <h2>⚠️ 最近告警</h2>
+                        <el-table :data="recentAlerts" style="width: 100%">
+                            <el-table-column prop="title" label="标题"></el-table-column>
+                            <el-table-column prop="level" label="级别" width="100">
+                                <template #default="scope">
+                                    <el-tag :type="getAlertType(scope.row.level)">{{ scope.row.level }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="createdAt" label="时间"></el-table-column>
+                        </el-table>
+                    </div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div v-if="activeTab === 'reports'">
+                    <div class="card">
+                        <h2>📋 测试报告</h2>
+                        <el-table :data="executions" style="width: 100%">
+                            <el-table-column prop="executionId" label="执行ID" width="180"></el-table-column>
+                            <el-table-column prop="testType" label="类型" width="120"></el-table-column>
+                            <el-table-column prop="passRate" label="通过率" width="100">
+                                <template #default="scope">
+                                    {{ (scope.row.passRate * 100).toFixed(1) }}%
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="createdAt" label="时间"></el-table-column>
+                            <el-table-column label="操作" width="150">
+                                <template #default="scope">
+                                    <el-button size="small" type="primary" @click="viewReport(scope.row.executionId)">
+                                        查看报告
+                                    </el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, computed } = Vue;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('dashboard');
+                const executing = ref(false);
+                const performanceLoading = ref(false);
+
+                // Stats
+                const stats = ref({
+                    totalExecutions: 0,
+                    totalTests: 0,
+                    totalPassed: 0,
+                    totalFailed: 0,
+                    averagePassRate: 0
+                });
+
+                // Execution
+                const executionForm = ref({
+                    packagePath: 'com.example.functional',
+                    testType: 'functional',
+                    checkQualityGate: true
+                });
+                const executionResult = ref(null);
+
+                // Performance
+                const performanceForm = ref({
+                    url: 'http://localhost:8080/api/health',
+                    threads: 10,
+                    rampUpSeconds: 10,
+                    durationSeconds: 60
+                });
+                const performanceResult = ref(null);
+
+                // Lists
+                const recentExecutions = ref([]);
+                const executions = ref([]);
+                const inspectionTasks = ref([]);
+                const recentAlerts = ref([]);
+
+                // API Base URL
+                const API_BASE = '';
+
+                // Load dashboard data
+                const loadDashboard = async () => {
+                    try {
+                        // Load stats
+                        const statsRes = await axios.get(`${API_BASE}/api/test/history`);
+                        const executions = statsRes.data.data || [];
+
+                        stats.value.totalExecutions = executions.length;
+                        stats.value.totalTests = executions.reduce((sum, e) => sum + (e.totalTests || 0), 0);
+                        stats.value.totalPassed = executions.reduce((sum, e) => sum + (e.passedTests || 0), 0);
+                        stats.value.totalFailed = executions.reduce((sum, e) => sum + (e.failedTests || 0), 0);
+                        stats.value.averagePassRate = executions.length > 0
+                            ? executions.reduce((sum, e) => sum + (e.passRate || 0), 0) / executions.length
+                            : 0;
+
+                        recentExecutions.value = executions.slice(0, 10);
+                    } catch (error) {
+                        console.error('Failed to load dashboard:', error);
+                    }
+                };
+
+                // Execute test
+                const executeTest = async () => {
+                    executing.value = true;
+                    try {
+                        const response = await axios.post(`${API_BASE}/api/test/run`, {
+                            packagePath: executionForm.value.packagePath,
+                            groups: [executionForm.value.testType],
+                            checkQualityGate: executionForm.value.checkQualityGate
+                        });
+                        executionResult.value = response.data.data;
+                        ElementPlus.ElMessage.success('测试执行完成');
+                    } catch (error) {
+                        ElementPlus.ElMessage.error('测试执行失败: ' + error.message);
+                    } finally {
+                        executing.value = false;
+                    }
+                };
+
+                // Run performance test
+                const runPerformanceTest = async () => {
+                    performanceLoading.value = true;
+                    try {
+                        const response = await axios.post(`${API_BASE}/api/performance/run`, performanceForm.value);
+                        performanceResult.value = response.data.data;
+                        ElementPlus.ElMessage.success('性能测试完成');
+                    } catch (error) {
+                        ElementPlus.ElMessage.error('性能测试失败: ' + error.message);
+                    } finally {
+                        performanceLoading.value = false;
+                    }
+                };
+
+                // Execute inspection
+                const executeInspection = async (taskId) => {
+                    try {
+                        await axios.post(`${API_BASE}/api/inspection/tasks/${taskId}/execute`);
+                        ElementPlus.ElMessage.success('巡检任务已触发');
+                    } catch (error) {
+                        ElementPlus.ElMessage.error('执行失败: ' + error.message);
+                    }
+                };
+
+                // View report
+                const viewReport = (executionId) => {
+                    window.open(`${API_BASE}/api/report/${executionId}/html`, '_blank');
+                };
+
+                // Get alert type
+                const getAlertType = (level) => {
+                    const types = {
+                        'INFO': 'info',
+                        'WARNING': 'warning',
+                        'ERROR': 'danger',
+                        'CRITICAL': 'danger'
+                    };
+                    return types[level] || 'info';
+                };
+
+                // Load inspection tasks
+                const loadInspectionTasks = async () => {
+                    try {
+                        const response = await axios.get(`${API_BASE}/api/inspection/tasks`);
+                        inspectionTasks.value = response.data.data || [];
+                    } catch (error) {
+                        console.error('Failed to load inspection tasks:', error);
+                    }
+                };
+
+                // Load alerts
+                const loadAlerts = async () => {
+                    try {
+                        const response = await axios.get(`${API_BASE}/api/inspection/alerts?limit=10`);
+                        recentAlerts.value = response.data.data || [];
+                    } catch (error) {
+                        console.error('Failed to load alerts:', error);
+                    }
+                };
+
+                onMounted(() => {
+                    loadDashboard();
+                    loadInspectionTasks();
+                    loadAlerts();
+                });
+
+                return {
+                    activeTab,
+                    stats,
+                    executionForm,
+                    executionResult,
+                    executing,
+                    executeTest,
+                    performanceForm,
+                    performanceResult,
+                    performanceLoading,
+                    runPerformanceTest,
+                    recentExecutions,
+                    executions,
+                    inspectionTasks,
+                    recentAlerts,
+                    executeInspection,
+                    viewReport,
+                    getAlertType
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
