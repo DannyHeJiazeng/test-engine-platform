@@ -6,8 +6,11 @@ import lombok.extern.slf4j.Slf4j;
  * JMeter 服务 - 简化版本（无需外部依赖）
  */
 @Slf4j
-@org.springframework.stereotype.Service
 public class JMeterService {
+
+    public JMeterService() {
+        // 默认构造函数
+    }
 
     /**
      * 执行性能测试

@@ -1,7 +1,6 @@
 package com.test.performance;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,11 +12,14 @@ import java.util.Map;
  * 整合 JMeterService 和 JmxBuilder 提供完整的性能测试服务
  */
 @Slf4j
-@Service
 public class PerformanceExecutor {
 
-    private final JMeterService jMeterService;
-    private final JmxBuilder jmxBuilder;
+    private JMeterService jMeterService;
+    private JmxBuilder jmxBuilder;
+
+    public PerformanceExecutor() {
+        // 默认构造函数
+    }
 
     public PerformanceExecutor(JMeterService jMeterService, JmxBuilder jmxBuilder) {
         this.jMeterService = jMeterService;

@@ -8,7 +8,7 @@ public enum TestType {
     FUNCTIONAL("functional", "功能测试"),
     PERFORMANCE("performance", "性能测试"),
     INSPECTION("inspection", "巡检测试"),
-    UNKNOWN("unknown", "未知类型");
+    UNKNOWN("", "未知类型");
 
     private final String groupName;
     private final String description;

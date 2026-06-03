@@ -133,8 +133,9 @@ public class TestResult {
 
     private static String getStackTraceAsString(Throwable throwable) {
         StringBuilder sb = new StringBuilder();
+        sb.append(throwable.getClass().getName()).append(": ").append(throwable.getMessage()).append("\n");
         for (StackTraceElement element : throwable.getStackTrace()) {
-            sb.append(element.toString()).append("\n");
+            sb.append("\tat ").append(element.toString()).append("\n");
         }
         return sb.toString();
     }

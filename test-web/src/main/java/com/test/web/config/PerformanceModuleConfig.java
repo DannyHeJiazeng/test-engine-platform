@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Primary;
 public class PerformanceModuleConfig {
 
     @Bean
+    @Primary
     public JmxBuilder jmxBuilder() {
         return new JmxBuilder();
     }
@@ -26,6 +27,7 @@ public class PerformanceModuleConfig {
     }
 
     @Bean
+    @Primary
     public PerformanceExecutor performanceExecutor(JMeterService jMeterService, JmxBuilder jmxBuilder) {
         return new PerformanceExecutor(jMeterService, jmxBuilder);
     }

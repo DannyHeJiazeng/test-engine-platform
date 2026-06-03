@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PerformanceTestService {
 
-    private final PerformanceExecutor performanceExecutor;
     private final PerformanceResultRepository resultRepository;
 
     /**
@@ -47,8 +46,12 @@ public class PerformanceTestService {
                 .maxResponseTimeMs(request.getMaxResponseTimeMs())
                 .build();
 
-        // 执行测试
-        PerformanceResult result = performanceExecutor.execute(config);
+        // 创建执行器并执行测试
+        JMeterService jMeterService = new JMeterService();
+        JmxBuilder jmxBuilder = new JmxBuilder();
+        PerformanceExecutor executor = new PerformanceExecutor(jMeterService, jmxBuilder);
+
+        PerformanceResult result = executor.execute(config);
 
         // 保存结果
         savePerformanceResult(result);
@@ -72,7 +75,11 @@ public class PerformanceTestService {
     public PerformanceResult executeConcurrencyTest(String url, int concurrency) {
         log.info("Executing concurrency test: url={}, concurrency={}", url, concurrency);
 
-        PerformanceResult result = performanceExecutor.executeConcurrencyTest(url, concurrency);
+        JMeterService jMeterService = new JMeterService();
+        JmxBuilder jmxBuilder = new JmxBuilder();
+        PerformanceExecutor executor = new PerformanceExecutor(jMeterService, jmxBuilder);
+
+        PerformanceResult result = executor.executeConcurrencyTest(url, concurrency);
         savePerformanceResult(result);
 
         return result;
@@ -87,7 +94,11 @@ public class PerformanceTestService {
         log.info("Executing gradual concurrency test: url={}, start={}, end={}, step={}",
                 url, startConcurrency, endConcurrency, step);
 
-        List<PerformanceResult> results = performanceExecutor.executeGradualConcurrencyTest(
+        JMeterService jMeterService = new JMeterService();
+        JmxBuilder jmxBuilder = new JmxBuilder();
+        PerformanceExecutor executor = new PerformanceExecutor(jMeterService, jmxBuilder);
+
+        List<PerformanceResult> results = executor.executeGradualConcurrencyTest(
                 url, startConcurrency, endConcurrency, step);
 
         // 保存所有结果
@@ -104,7 +115,11 @@ public class PerformanceTestService {
         log.info("Executing load test: url={}, threads={}, duration={}min",
                 url, threads, durationMinutes);
 
-        PerformanceResult result = performanceExecutor.executeLoadTest(url, threads, durationMinutes);
+        JMeterService jMeterService = new JMeterService();
+        JmxBuilder jmxBuilder = new JmxBuilder();
+        PerformanceExecutor executor = new PerformanceExecutor(jMeterService, jmxBuilder);
+
+        PerformanceResult result = executor.executeLoadTest(url, threads, durationMinutes);
         savePerformanceResult(result);
 
         return result;

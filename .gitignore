@@ -55,9 +55,6 @@ local.properties
 /nbdist/
 /.nb-gradle/
 
-# VS Code
-.vscode/
-
 # Application Specific
 test-workspace/
 test-results/
@@ -92,17 +89,11 @@ Thumbs.db
 .Trashes
 ehthumbs.db
 
-# Build outputs
-*.class
-*.jar
-*.war
-*.ear
-target/
-
-# Maven
-.mvn/
-mvnw
-mvnw.cmd
-
 # Docker
-.dockerignore
+docker-compose.override.yml
+
+# Redis
+dump.rdb
+
+# Node (root level)
+node_modules/

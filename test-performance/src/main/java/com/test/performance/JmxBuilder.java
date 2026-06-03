@@ -1,7 +1,6 @@
 package com.test.performance;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -18,10 +17,13 @@ import java.util.Map;
  * 用于生成 JMeter JMX 测试计划文件
  */
 @Slf4j
-@Service
 public class JmxBuilder {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+
+    public JmxBuilder() {
+        // 默认构造函数
+    }
 
     /**
      * 构建 JMX 文件
