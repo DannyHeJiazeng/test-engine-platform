@@ -219,3 +219,8 @@ public @interface CustomTest {
 ## 许可证
 
 MIT License
+
+### 默认管理员账号
+
+默认账号：`admin`，默认密码：`123456`
+可通过 `TEST_ENGINE_ADMIN_USERNAME` 和 `TEST_ENGINE_ADMIN_PASSWORD_HASH` 覆盖默认配置。

@@ -10,6 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import com.test.web.service.InspectionService;
+import com.test.web.entity.InspectionTaskEntity;
 
 /**
  * 巡检控制器
@@ -21,7 +24,7 @@ import java.util.List;
 @Tag(name = "Inspection", description = "巡检相关接口")
 public class InspectionController {
 
-    private final InspectionScheduler inspectionScheduler;
+    private final InspectionService inspectionService;
     private final HealthChecker healthChecker;
     private final AlertService alertService;
     private final MetricsCollector metricsCollector;
@@ -31,8 +34,8 @@ public class InspectionController {
      */
     @GetMapping("/tasks")
     @Operation(summary = "获取所有巡检任务")
-    public ApiResponse<List<InspectionScheduler.InspectionTask>> getAllTasks() {
-        return ApiResponse.success(inspectionScheduler.getAllTasks());
+    public ApiResponse<List<InspectionTaskEntity>> getAllTasks() {
+        return ApiResponse.success(inspectionService.getAllTasks());
     }
 
     /**
@@ -40,18 +43,19 @@ public class InspectionController {
      */
     @PostMapping("/tasks")
     @Operation(summary = "创建巡检任务")
-    public ApiResponse<Void> createTask(@RequestBody InspectionTaskRequest request) {
+    public ApiResponse<Void> createTask(@Valid @RequestBody InspectionTaskRequest request) {
         log.info("Creating inspection task: {}", request.getTaskId());
 
-        InspectionScheduler.InspectionConfig config = new InspectionScheduler.InspectionConfig();
-        config.setPackagePath(request.getPackagePath());
-        config.setIntervalSeconds(request.getIntervalSeconds());
-        config.setAlertOnFailure(request.isAlertOnFailure());
-        config.setAlertLevel(request.getAlertLevel());
-
-        inspectionScheduler.registerTask(request.getTaskId(), config);
+        inspectionService.createTask(request);
 
         return ApiResponse.success(null, "Inspection task created");
+    }
+
+    @PutMapping("/tasks/{taskId}")
+    public ApiResponse<Void> updateTask(@PathVariable String taskId,
+            @Valid @RequestBody InspectionTaskRequest request) {
+        inspectionService.updateTask(taskId, request);
+        return ApiResponse.success(null, "Inspection task updated");
     }
 
     /**
@@ -61,7 +65,7 @@ public class InspectionController {
     @Operation(summary = "取消巡检任务")
     public ApiResponse<Void> cancelTask(@PathVariable String taskId) {
         log.info("Cancelling inspection task: {}", taskId);
-        inspectionScheduler.cancelTask(taskId);
+        inspectionService.deleteTask(taskId);
         return ApiResponse.success(null, "Inspection task cancelled");
     }
 
@@ -72,7 +76,7 @@ public class InspectionController {
     @Operation(summary = "立即执行巡检任务")
     public ApiResponse<Void> executeTask(@PathVariable String taskId) {
         log.info("Executing inspection task immediately: {}", taskId);
-        inspectionScheduler.executeTaskImmediately(taskId);
+        inspectionService.executeTaskAsync(taskId);
         return ApiResponse.success(null, "Inspection task execution started");
     }
 
@@ -81,8 +85,8 @@ public class InspectionController {
      */
     @GetMapping("/tasks/{taskId}")
     @Operation(summary = "获取巡检任务详情")
-    public ApiResponse<InspectionScheduler.InspectionTask> getTask(@PathVariable String taskId) {
-        InspectionScheduler.InspectionTask task = inspectionScheduler.getTask(taskId);
+    public ApiResponse<InspectionTaskEntity> getTask(@PathVariable String taskId) {
+        InspectionTaskEntity task = inspectionService.getTask(taskId);
         if (task == null) {
             return ApiResponse.error("Task not found: " + taskId);
         }

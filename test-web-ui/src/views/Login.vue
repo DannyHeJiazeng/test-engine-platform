@@ -15,28 +15,11 @@
         @keyup.enter="handleLogin"
       >
         <el-form-item prop="username">
-          <el-input
-            v-model="loginForm.username"
-            placeholder="请输入用户名"
-            size="large"
-            prefix-icon="User"
-            clearable
-          />
+          <el-input v-model="loginForm.username" autocomplete="username" placeholder="请输入账号" size="large" />
         </el-form-item>
-
         <el-form-item prop="password">
-          <el-input
-            v-model="loginForm.password"
-            type="password"
-            placeholder="请输入密码"
-            size="large"
-            prefix-icon="Lock"
-            show-password
-          />
-        </el-form-item>
-
-        <el-form-item>
-          <el-checkbox v-model="loginForm.remember">记住我</el-checkbox>
+          <el-input v-model="loginForm.password" type="password" show-password
+            autocomplete="current-password" placeholder="请输入密码" size="large" />
         </el-form-item>
 
         <el-form-item>
@@ -53,7 +36,7 @@
       </el-form>
 
       <div class="login-footer">
-        <p>默认账号：admin / admin123</p>
+        <p>使用管理员分配的账号登录</p>
       </div>
     </div>
   </div>
@@ -70,20 +53,10 @@ const userStore = useUserStore()
 const formRef = ref(null)
 const loading = ref(false)
 
-const loginForm = reactive({
-  username: 'admin',
-  password: 'admin123',
-  remember: false
-})
-
+const loginForm = reactive({ username: '', password: '' })
 const rules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少 6 位', trigger: 'blur' }
-  ]
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
 const handleLogin = async () => {
@@ -93,14 +66,8 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       try {
-        // 模拟登录，实际项目中应该调用 API
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        userStore.setToken('mock-token-' + Date.now())
-        userStore.setUserInfo({
-          username: loginForm.username,
-          role: 'admin'
-        })
+        await userStore.login(loginForm.username, loginForm.password)
+        loginForm.password = ''
 
         ElMessage.success('登录成功')
         router.push('/')

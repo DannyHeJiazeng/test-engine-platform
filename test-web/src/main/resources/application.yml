@@ -8,7 +8,7 @@ spring:
     allow-bean-definition-overriding: true
 
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    url: ${TEST_ENGINE_DB_URL:jdbc:h2:file:./data/test-engine}
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -16,7 +16,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: false
 
   h2:
@@ -64,3 +64,17 @@ logging:
     com.test: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+# Browser sessions expire after 30 minutes of inactivity.
+---
+server:
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${TEST_ENGINE_COOKIE_SECURE:false}
+test-engine:
+  auth:
+    username: ${TEST_ENGINE_ADMIN_USERNAME:admin}
+    password-hash: ${TEST_ENGINE_ADMIN_PASSWORD_HASH:$2y$12$l/VAzhb7MNMPTt4KUQB6/Odyz.UItiEoTF8luC9WjCwTyQigArrqm}

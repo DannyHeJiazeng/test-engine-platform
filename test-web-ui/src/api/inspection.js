@@ -20,7 +20,7 @@ export function createInspectionTask(data) {
 // 删除巡检任务
 export function deleteInspectionTask(taskId) {
   return request({
-    url: `/inspection/tasks/${taskId}`,
+    url: `/inspection/tasks/${encodeURIComponent(taskId)}`,
     method: 'delete'
   })
 }
@@ -28,7 +28,7 @@ export function deleteInspectionTask(taskId) {
 // 立即执行巡检
 export function executeInspectionTask(taskId) {
   return request({
-    url: `/inspection/tasks/${taskId}/execute`,
+    url: `/inspection/tasks/${encodeURIComponent(taskId)}/execute`,
     method: 'post'
   })
 }
@@ -47,4 +47,8 @@ export function healthCheck() {
     url: '/inspection/health-checks',
     method: 'get'
   })
+}
+
+export function updateInspectionTask(taskId, data) {
+  return request({ url: `/inspection/tasks/${encodeURIComponent(taskId)}`, method: 'put', data })
 }

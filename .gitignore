@@ -97,3 +97,26 @@ dump.rdb
 
 # Node (root level)
 node_modules/
+# Local persistent H2 database
+data/
+*.mv.db
+*.trace.db
+
+# Local AI assistant configuration
+.claude/
+CLAUDE.md
+.codex/
+
+# Local environment and private keys
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Test runner output
+test-output/
+allure-results/
+allure-report/

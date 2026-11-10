@@ -40,7 +40,7 @@ public class TestExecutionService {
     /**
      * 执行测试
      */
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public TestExecutionResponse executeTest(TestExecutionRequest request) {
         log.info("Executing test: {}", request);
 
@@ -114,7 +114,7 @@ public class TestExecutionService {
      * 异步执行测试
      */
     @Async
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public CompletableFuture<TestExecutionResponse> executeTestAsync(TestExecutionRequest request) {
         return CompletableFuture.completedFuture(executeTest(request));
     }
@@ -222,6 +222,13 @@ public class TestExecutionService {
         response.setTotalTests(entity.getTotalTests());
         response.setPassedTests(entity.getPassedTests());
         response.setFailedTests(entity.getFailedTests());
+        response.setResults(details.stream().map(detail -> TestResult.builder()
+                .className(detail.getClassName()).methodName(detail.getMethodName())
+                .status(TestResult.TestStatus.valueOf(detail.getStatus()))
+                .description(detail.getDescription()).priority(detail.getPriority())
+                .durationMs(detail.getDurationMs() == null ? 0 : detail.getDurationMs())
+                .failureMessage(detail.getFailureMessage()).stackTrace(detail.getStackTrace())
+                .build()).toList());
         response.setErrorMessage(entity.getErrorMessage());
         return response;
     }

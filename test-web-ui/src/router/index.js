@@ -1,3 +1,4 @@
+import { useUserStore } from '@/stores/user'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
@@ -80,16 +81,10 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-
-  if (to.path !== '/login' && !token) {
-    next('/login')
-  } else if (to.path === '/login' && token) {
-    next('/')
-  } else {
-    next()
-  }
+router.beforeEach(async to => {
+  const authenticated = await useUserStore().refresh()
+  if (to.path !== '/login' && !authenticated) return '/login'
+  if (to.path === '/login' && authenticated) return '/'
 })
 
 export default router

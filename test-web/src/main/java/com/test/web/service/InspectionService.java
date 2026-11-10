@@ -46,7 +46,7 @@ public class InspectionService {
 
         InspectionTaskEntity entity = new InspectionTaskEntity();
         entity.setTaskId(request.getTaskId());
-        entity.setTaskName("Inspection Task - " + request.getTaskId());
+        entity.setTaskName(request.getTaskName() == null ? "Inspection Task - " + request.getTaskId() : request.getTaskName());
         entity.setPackagePath(request.getPackagePath());
         entity.setIntervalSeconds(request.getIntervalSeconds());
         entity.setEnabled(true);
@@ -57,6 +57,20 @@ public class InspectionService {
         entity.setFailureCount(0);
 
         return taskRepository.save(entity);
+    }
+
+    public List<InspectionTaskEntity> getAllTasks() {
+        return taskRepository.findAll();
+    }
+
+    @Transactional
+    public void updateTask(String taskId, InspectionTaskRequest request) {
+        InspectionTaskEntity entity = getTask(taskId);
+        entity.setTaskName(request.getTaskName());
+        entity.setPackagePath(request.getPackagePath());
+        entity.setIntervalSeconds(request.getIntervalSeconds());
+        entity.setAlertOnFailure(request.isAlertOnFailure());
+        entity.setAlertLevel(request.getAlertLevel().name());
     }
 
     /**
@@ -106,6 +120,7 @@ public class InspectionService {
      * 异步执行巡检任务
      */
     @Async
+    @Transactional
     public void executeTaskAsync(String taskId) {
         executeTask(taskId);
     }

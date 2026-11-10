@@ -1,32 +1,31 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import request from '@/utils/request'
+
+// Authentication is held by the server session, never by localStorage.
+localStorage.removeItem('token')
+localStorage.removeItem('userInfo')
 
 export const useUserStore = defineStore('user', () => {
-  const token = ref(localStorage.getItem('token') || '')
-  const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || '{}'))
-
-  function setToken(newToken) {
-    token.value = newToken
-    localStorage.setItem('token', newToken)
+  const userInfo = ref(null)
+  async function refresh() {
+    try {
+      const { data } = await request.get('/auth/me', { silent: true })
+      userInfo.value = data
+      return true
+    } catch (error) {
+      userInfo.value = null
+      if (error.response?.status === 401) return false
+      throw error
+    }
   }
-
-  function setUserInfo(info) {
-    userInfo.value = info
-    localStorage.setItem('userInfo', JSON.stringify(info))
+  async function login(username, password) {
+    const { data } = await request.post('/auth/login', new URLSearchParams({ username, password }))
+    userInfo.value = data
   }
-
-  function logout() {
-    token.value = ''
-    userInfo.value = {}
-    localStorage.removeItem('token')
-    localStorage.removeItem('userInfo')
+  async function logout() {
+    await request.post('/auth/logout')
+    userInfo.value = null
   }
-
-  return {
-    token,
-    userInfo,
-    setToken,
-    setUserInfo,
-    logout
-  }
+  return { userInfo, refresh, login, logout }
 })

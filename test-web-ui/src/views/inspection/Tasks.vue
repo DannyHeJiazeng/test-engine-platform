@@ -22,8 +22,8 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'info'">
-              {{ row.status === 'active' ? '运行中' : '已停止' }}
+            <el-tag :type="row.enabled ? 'success' : 'info'">
+              {{ row.enabled ? '运行中' : '已停止' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -58,7 +58,7 @@
     >
       <el-form :model="form" label-width="100px">
         <el-form-item label="任务 ID" required>
-          <el-input v-model="form.taskId" placeholder="例如：daily-health-check" />
+          <el-input v-model="form.taskId" :disabled="isEdit" placeholder="例如：daily-health-check" />
         </el-form-item>
         <el-form-item label="任务名称" required>
           <el-input v-model="form.taskName" placeholder="例如：每日健康检查" />
@@ -98,29 +98,18 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-const tasks = ref([
-  {
-    taskId: 'daily-health-check',
-    taskName: '每日健康检查',
-    packagePath: 'com.example.inspection',
-    intervalSeconds: 300,
-    status: 'active',
-    alertOnFailure: true,
-    alertLevel: 'WARNING'
-  },
-  {
-    taskId: 'api-smoke-test',
-    taskName: 'API 冒烟测试',
-    packagePath: 'com.example.smoke',
-    intervalSeconds: 600,
-    status: 'active',
-    alertOnFailure: true,
-    alertLevel: 'ERROR'
-  }
-])
+import { getInspectionTasks, createInspectionTask, updateInspectionTask,
+  deleteInspectionTask, executeInspectionTask } from '@/api/inspection'
+
+const tasks = ref([])
+const loadTasks = async () => {
+  const response = await getInspectionTasks()
+  tasks.value = response.data
+}
+onMounted(loadTasks)
 
 const dialogVisible = ref(false)
 const isEdit = ref(false)
@@ -161,30 +150,31 @@ const handleEdit = (row) => {
   dialogVisible.value = true
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (isEdit.value) {
-    ElMessage.success('任务已更新')
+    await updateInspectionTask(form.taskId, { ...form })
   } else {
-    tasks.value.push({ ...form, status: 'active' })
-    ElMessage.success('任务已创建')
+    await createInspectionTask({ ...form })
   }
+  await loadTasks()
+  ElMessage.success(isEdit.value ? '任务已更新' : '任务已创建')
   dialogVisible.value = false
 }
 
-const handleDelete = (row) => {
-  ElMessageBox.confirm('确定要删除该任务吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    tasks.value = tasks.value.filter(t => t.taskId !== row.taskId)
-    ElMessage.success('删除成功')
-  })
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm('确定要删除该任务吗？', '提示', { type: 'warning' })
+  } catch { return }
+  await deleteInspectionTask(row.taskId)
+  await loadTasks()
+  ElMessage.success('删除成功')
 }
 
-const handleExecute = (row) => {
+const handleExecute = async (row) => {
+  await executeInspectionTask(row.taskId)
   ElMessage.success(`任务 ${row.taskId} 已开始执行`)
 }
+
 </script>
 
 <style scoped>
